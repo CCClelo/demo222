@@ -1,0 +1,13 @@
+[Unit]
+Description=Clash Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/opt/clash/clash -d /opt/clash
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

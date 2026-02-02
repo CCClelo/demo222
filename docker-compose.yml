@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # WARP 代理容器（可选，如果需要多个代理）
+  warp1:
+    image: caomingjun/warp:latest
+    container_name: warp1
+    restart: always
+    ports:
+      - "40001:1080"  # SOCKS5 端口
+    environment:
+      - WARP_SLEEP=2
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - /lib/modules:/lib/modules
+
+  warp2:
+    image: caomingjun/warp:latest
+    container_name: warp2
+    restart: always
+    ports:
+      - "40002:1080"
+    environment:
+      - WARP_SLEEP=2
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - /lib/modules:/lib/modules
+
+  warp3:
+    image: caomingjun/warp:latest
+    container_name: warp3
+    restart: always
+    ports:
+      - "40003:1080"
+    environment:
+      - WARP_SLEEP=2
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - /lib/modules:/lib/modules
+
+  # Chat Gateway 主服务
+  chat-gateway:
+    build: .
+    container_name: chat-gateway
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - BASE_URL=https://demo.chat-sdk.dev
+      - WARP_PROXIES=socks5://warp1:1080,socks5://warp2:1080,socks5://warp3:1080
+      - WARP_CONTAINERS=warp1,warp2,warp3
+      - PORT=8080
+      - DEBUG=false
+      - USE_AUTH=true  # 启用账户模式
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # 允许重启 WARP 容器
+    depends_on:
+      - warp1
+      - warp2
+      - warp3
+    networks:
+      - chat-network
+
+networks:
+  chat-network:
+    driver: bridge

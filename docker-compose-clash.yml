@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # 方案A：使用服务器本地的 Clash
+  chat-gateway:
+    build: .
+    container_name: chat-gateway
+    restart: always
+    network_mode: "host"  # 使用主机网络，可以访问 127.0.0.1:7890
+    environment:
+      - BASE_URL=https://demo.chat-sdk.dev
+      - WARP_PROXIES=http://127.0.0.1:7890
+      - WARP_CONTAINERS=clash
+      - PORT=8080
+      - USE_AUTH=true
+      - DEBUG=false
+
+---
+# 方案B：Clash 也在 Docker 中运行
+version: '3.8'
+
+services:
+  clash:
+    image: dreamacro/clash-premium
+    container_name: clash
+    restart: always
+    volumes:
+      - ./clash-config.yaml:/root/.config/clash/config.yaml
+      - ./Country.mmdb:/root/.config/clash/Country.mmdb
+    ports:
+      - "7890:7890"   # HTTP 代理端口
+      - "7891:7891"   # SOCKS5 代理端口
+      - "9090:9090"   # 控制面板端口
+    networks:
+      - chat-network
+
+  chat-gateway:
+    build: .
+    container_name: chat-gateway
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - BASE_URL=https://demo.chat-sdk.dev
+      - WARP_PROXIES=http://clash:7890
+      - WARP_CONTAINERS=clash
+      - PORT=8080
+      - USE_AUTH=true
+      - DEBUG=false
+    depends_on:
+      - clash
+    networks:
+      - chat-network
+
+networks:
+  chat-network:
+    driver: bridge
